@@ -1,0 +1,14 @@
+{
+  "name": "exclaim",
+  "version": "1.0.0",
+  "description": "A remote log server w/ Emoji support for web game development",
+  "main": "exclaim.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "node-emoji": "^1.4.1"
+  }
+}
