@@ -4,11 +4,16 @@
   "description": "A remote log server w/ Emoji support for web game development",
   "main": "exclaim.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node ./exclaim.js",
+    "test": "mocha"
   },
-  "author": "",
+  "author": "Corey Sharrah <corey@eviltreehouse.com>",
   "license": "ISC",
   "dependencies": {
+    "cli-color": "^1.1.0",
     "node-emoji": "^1.4.1"
+  },
+  "devDependencies": {
+    "simple-assert": "^1.0.0"
   }
 }
