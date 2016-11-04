@@ -1,3 +1,3 @@
 // @TODO: [x]Get basic messaging functional
 // @TODO: [x]Get styles working
-// @TODO: Get STDIN-based filters working.
+// @TODO: [x]Get STDIN-based filters working.

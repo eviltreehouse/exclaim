@@ -5,7 +5,7 @@
   "main": "exclaim.js",
   "scripts": {
     "start": "node ./exclaim.js",
-    "test": "DEBUG=1 TEST_HOST=localhost TEST_PORT=8010 mocha"
+    "test": "DEBUG=0 TEST_HOST=localhost TEST_PORT=8010 mocha"
   },
   "author": "Corey Sharrah <corey@eviltreehouse.com>",
   "license": "ISC",

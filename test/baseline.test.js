@@ -112,6 +112,35 @@ describe("CLI Functionality", () => {
 	});
 });
 
+describe("Buffer Functionality", () => {
+	it("We can enable buffering and messages won't present", function(done) {
+		this.timeout(3000);
+		exclaim.setFilterTo(null, null);
+		exclaim.useBuffer(true);
+		assert(exclaim.stats().buffer == 1);
+		
+		var st = exclaim.stats().presented;
+		
+		_post('/log', { 'msg': "I'm Buffered" }).then((res) => {
+			if (exclaim.stats().presented != st) {
+				done("Message was presented and it should have been buffered!");
+			} else if (exclaim.stats().buffered == 0) {
+				done("Message wasn't buffered and it should have been!");
+			} else {
+				// make sure it doesn't pop out..
+				setTimeout(done, 1500);
+			}
+		});
+	});
+	
+	it("When we disable buffering, messages should present", function() {
+		var st = exclaim.stats().presented;
+		exclaim.useBuffer(false);
+		
+		assert(exclaim.stats().presented == st + 1);
+	});
+});
+
 
 var _post = (uri, _opts) => {
 	if (! _opts) _opts = {};

@@ -13,7 +13,7 @@ var static = require('./exclaim-static');
 const EXCLAIM_VERSION = '0.9.0';
 
 const DEFAULT_PORT = 8010;
-const DEBUG = process.env.DEBUG ? true : false;
+const DEBUG = parseInt(process.env.DEBUG) > 0 ? true : false;
 const SUPPORTED_STYLE_COLORS = ['black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white'];
 const SUPPORTED_STYLE_TYPES  = ['bold', 'italic', 'underline', 'blink', 'inverse', 'strike'];
 
@@ -75,6 +75,8 @@ function parseRequest(url, body) {
 	if (! filterMessage(msg)) {
 		if (use_buffer) bufferMessage(msg); 
 		else logMessage(msg);
+	} else {
+		if (DEBUG) console.log("{ message filtered }", active_filter);
 	}
 	
 	return { success: true, msgId: ++msgId, context: ctx, msgLen: msg.msg.length };
@@ -209,9 +211,20 @@ serve.stats = function() {
 	};
 };
 
-serve.setFilterTo = function(a,b) {
+serve.setFilterTo = function(a, b) {
 	active_filter[0] = a;
 	active_filter[1] = b;
+};
+
+serve.useBuffer = function(bool) {
+	if (bool) {
+		use_buffer = true;
+	} else {
+		use_buffer = false;
+		if (msg_buffer.length > 0) {
+			flushBuffer();
+		}
+	}
 };
 
 function activateCLI() {
