@@ -5,7 +5,7 @@ JavaScript game dev w/o needing to have the cumbersome Web Console open. It also
 
 - built-in JavaScript client for web applications
 - colors
-- emoji!
+- emoji! https://raw.githubusercontent.com/omnidan/node-emoji/master/lib/emoji.json
 - contexts / filters - interactive CLI
 - run iterartions (FUTURE?)
 - templates
