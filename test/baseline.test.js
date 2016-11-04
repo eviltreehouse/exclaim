@@ -62,6 +62,56 @@ describe("Core Functionality", () => {
 	});
 });
 
+describe("Filter functionality", () => {
+	it("With filter set, ensure msg gets through", function(done) {
+		exclaim.setFilterTo('mocha', 'test');
+		var st = exclaim.stats().presented;
+		_post('/log', { 'msg': "TEST MESG - SEE ME 1", 'ctx': "mocha:test" }).then((res) => {
+			if (exclaim.stats().presented != st + 1) {
+				done("Message was not presented and it should have been!");
+			} else {
+				done();
+			}
+		});				
+	});
+	
+	it("With filter set, ensure msg gets filtered", function(done) {
+		exclaim.setFilterTo('mocha', 'test');
+		var st = exclaim.stats().presented;
+		var fst = exclaim.stats().filtered;
+		
+		_post('/log', { 'msg': "TEST MESG - DONT SEE ME 2", 'ctx': "not_mocha:test" }).then((res) => {
+			if (exclaim.stats().presented != st || exclaim.stats().filtered != fst + 1) {
+				done("Message was presented and it shouldnt have been!");
+			} else {
+				done();
+			}
+		});		
+	});
+	
+	it("With filter unset, ensure msgs gets through", function(done) {
+		exclaim.setFilterTo(null, null);
+		var st = exclaim.stats().presented;
+		_post('/log', { 'msg': "TEST MESG - SEE ME 3", 'ctx': "not_mocha:test" }).then((res) => {
+			if (exclaim.stats().presented != st + 1) {
+				done("Message was presented and it should have been!");
+			} else {
+				done();
+			}
+		});
+	});
+});
+
+describe("CLI Functionality", () => {
+	it("We can send bad commands to our CLI handler", () => {
+		assert(! exclaim.sendCLI("demo"));
+	});
+	
+	it("We can send commands to our CLI handler to change our filter", () => {
+		assert( exclaim.sendCLI("app:*") );
+	});
+});
+
 
 var _post = (uri, _opts) => {
 	if (! _opts) _opts = {};
