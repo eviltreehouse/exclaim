@@ -12,8 +12,15 @@ var static = require('./exclaim-static');
 
 const DEFAULT_PORT = 8010;
 const DEBUG = process.env.DEBUG ? true : false;
+const SUPPORTED_STYLE_COLORS = ['black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white'];
+const SUPPORTED_STYLE_TYPES  = ['bold', 'italic', 'underline', 'blink', 'inverse', 'strike'];
 
+var server;
 var msgId = 0;
+var use_buffer = false;
+var msg_buffer = [];
+
+var active_filters = [];
 
 function handleRequest(request, response) {
 	//var req = url.parse(request.url, true);
@@ -61,34 +68,83 @@ function parseRequest(url, body) {
 	var msg = processMessage(raw_msg, ctx);
 	if (DEBUG) console.log( '> IN MSG:', `[${ctx}]`, raw_msg );
 	
-	logMessage(msg);
+	if (! filterMessage(msg)) {
+		if (use_buffer) bufferMessage(msg); 
+		else logMessage(msg);
+	}
 	
 	return { success: true, msgId: ++msgId, context: ctx, msgLen: msg.msg.length };
 }
 
+function filterMessage(msg) {
+	// to do: use any filters we have and return `true` if we want to ignore it.
+	return false;
+}
+
 function processMessage(_msg, ctx) {
-	var parsed_msg = emoji.emojify(_msg);
+	var styled_msg = styleMessage(_msg);
+	var parsed_msg = emoji.emojify(styled_msg);
 	
 	return { 'msg': parsed_msg, 'ctx': ctx };
 }
 
-function logMessage(msg) {
-	var _msg = msg.ctx != null ? `[${msg.ctx}] ${msg.msg}` : `${msg.msg}`;
-	console.log( styleText('cyan', _msg));
+function bufferMessage(msg) {
+	msg_buffer.push(msg);
 }
 
-function styleText(context, msg) {
-	var f = clc[context+'Bright'];
-	f = f['bold'];
+function flushBuffer() {
+	// protect against sudden re-engagement
+	var siz = msg_buffer.length;
 	
-	return f(msg); // @FIXME - we need to support bold/underline/etc too..
+	for (var i = 0; i < siz; i++) {
+		logMessage(msg_buffer.shift());
+	}
+	
+	if ( (! use_buffer) && msg_buffer.length > 0) {
+		// recurse if something showed up and its 
+		// okay to display.
+		flushBuffer();
+	}
 }
 
+function logMessage(msg) {
+	var _msg = msg.ctx != null ? clc.bold(`[${msg.ctx}]`) + ` ${msg.msg}` : `${msg.msg}`;
+	console.log(_msg);
+}
 
+function styleMessage(_msg) {
+	var ma;
+	while(ma = _msg.match(/\{\{([a-z\:]+)\} (.*?)\}\}/)) {
+		var style = ma[1];
+		var text  = ma[2];
+		_msg = _msg.replace('{{' + style + '} ' + ma[2] + '}}', styleText(style, text));
+	}
+	
+	return _msg;
+}
 
-var server = http.createServer(handleRequest);
+function styleText(_style, text) {
+	var f = null;
+	var styles = _style.split(":");
+	for (var si in styles) {
+		var style = styles[si];
+		if (SUPPORTED_STYLE_COLORS.indexOf(style) != -1) {
+			var m = ''+style+'Bright';
+			f = f ? f[m] : clc[m];
+		} else if (SUPPORTED_STYLE_TYPES.indexOf(style) != -1) {
+			f = f ? f[style] : clc[style];
+		} else {
+			// ignore.
+			return;
+		}
+	}
+	
+	return f ? f(text) : text;
+}
+
 
 function serve(host, port, cb) {
+	server = http.createServer(handleRequest);
 	if (! host) host = '127.0.0.1';
 	if (! port) port = DEFAULT_PORT;
 	
@@ -97,7 +153,8 @@ function serve(host, port, cb) {
 		if (cb) cb();
 	});
 	
-	msgId = 0;
+	msgId = 0; msg_buffer.length = 0;
+	use_buffer = false;
 	
 	return true;
 }

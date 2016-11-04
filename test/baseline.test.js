@@ -51,6 +51,15 @@ describe("Core Functionality", () => {
 			done();
 		});		
 	});
+	
+	it("We can send messages with styling", function(done) {
+		_post('/log', { 'msg': "This element should be bold/cyan -> {{bold:cyan} element!}}, and this inversed -> {{inverse} Inverse Me!}}" }).then((res) => {
+			if (res[0]) return done(res[2]);
+			if(res[1].success !== true) return done("Success not TRUE");
+			if(! (res[1].msgId > 0)) return done("msgId invalid");
+			done();
+		});			
+	});
 });
 
 
