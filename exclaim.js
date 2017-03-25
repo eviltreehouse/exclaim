@@ -42,7 +42,7 @@ function Exclaim(host, port, cb) {
 		'presented': 0
 	};
 	
-	this.active_filter = [null, null];
+	this.ctx_filter = [null, null];
 	this.use_buffer = false;	
 }
 
@@ -98,7 +98,7 @@ Exclaim.prototype.parseRequest = function(url, body) {
 		if (this.use_buffer) this.bufferMessage(msg); 
 		else this.logMessage(msg);
 	} else {
-		if (DEBUG) console.log("{ message filtered }", this.active_filter);
+		if (DEBUG) console.log("{ message filtered }", this.ctx_filter);
 	}
 	
 	return { success: true, msgId: ++this.msgId, context: ctx, msgLen: msg.msg.length };
@@ -106,24 +106,24 @@ Exclaim.prototype.parseRequest = function(url, body) {
 
 Exclaim.prototype.filterMessage = function(msg) {
 	// to do: use any filters we have and return `true` if we want to ignore it.
-	if (this.active_filter[0] == null && this.active_filter[1] == null) return false;
+	if (this.ctx_filter[0] == null && this.ctx_filter[1] == null) return false;
 	
 	var filtered = false;
 	
-	//if (DEBUG) console.log("? FILTER MSG CTX OF " + msg.ctx + " AGAINST " + active_filter.join(":"));
+	//if (DEBUG) console.log("? FILTER MSG CTX OF " + msg.ctx + " AGAINST " + ctx_filter.join(":"));
 	
 	if ( (! msg.ctx) || msg.ctx == '-') {
 		// we have a filter on, no dice.
 		filtered = true;
 	} else {
 		var ctx = msg.ctx.split(":");
-		if (this.active_filter[0] == null || this.active_filter[0] == '*' || ctx[0] == this.active_filter[0]) {
+		if (this.ctx_filter[0] == null || this.ctx_filter[0] == '*' || ctx[0] == this.ctx_filter[0]) {
 			// so far so good
 		} else {
 			filtered = true;
 		}
 		
-		if ( (!filtered) && (this.active_filter[1] == null || this.active_filter[1] == '*' || ctx[1] == this.active_filter[1])) {
+		if ( (!filtered) && (this.ctx_filter[1] == null || this.ctx_filter[1] == '*' || ctx[1] == this.ctx_filter[1])) {
 			// I think we're okay
 		} else {
 			filtered = true;
@@ -165,8 +165,9 @@ Exclaim.prototype.flushBuffer = function() {
 
 Exclaim.prototype.logMessage = function(msg) {
 	this.counts.presented += 1;
-	var _msg = msg.ctx != null ? clc.bold(`[${msg.ctx}]`) + ` ${msg.msg}` : `${msg.msg}`;
-	present(msg);
+	var now = timestamp();
+	var _msg = clc.bold(`[${now}]`) + (msg.ctx != null ? clc.bold(`[${msg.ctx}] `) : ' ') + msg.msg;
+	present(_msg);
 }
 
 // alias some functionality to make testing easier.
@@ -185,8 +186,8 @@ Exclaim.prototype.stats = function() {
 };
 
 Exclaim.prototype.setFilterTo = function(a, b) {
-	this.active_filter[0] = a ? a : null;
-	this.active_filter[1] = b ? b : null;
+	this.ctx_filter[0] = a ? a : null;
+	this.ctx_filter[1] = b ? b : null;
 };
 
 Exclaim.prototype.useBuffer = function(bool) {
@@ -214,6 +215,7 @@ function processCLI(ex, cmd) {
 		ex.setFilterTo(filter[0] == '*' ? null : filter[0],
 					   filter[1] == '*' ? null : filter[1]
 		);
+		filter = filter.join(":");
 		
 		present(emoji.emojify(`:flashlight:  Filter SET to '${filter}'.`));
 		return true;
@@ -289,8 +291,10 @@ function epoch() {
 function present() {
 	// We don't actually need to display anything when
 	// running our unit tests...	
-	if (process.env.NODE_ENV != 'test') {
-		console.log.apply(console, Array.prototype.slice.call(arguments));
+	if (process.env.NODE_ENV != 'test' || process.env.EXCLAIM_FORCE_PRESENT == 1) {
+		var a = Array.prototype.slice.call(arguments);
+		
+		console.log.apply(this, a);
 	}
 }
 

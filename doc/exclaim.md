@@ -48,8 +48,9 @@ patterns would involve activating the console filter to show ```app:*```, ```*:e
 Wrap the message content you want affected like so: ```Lets show some {{red}red text}}```. In addition to basic ANSI colors, you can also use font attributes like _underline_ or _bold_. 
 
 
-**Run Iterations**
+**Run Iterations (Sessions)**
 
+*re-write to match new methodology*
 For situations where grouping messages into a logical context instead of a global context is preferable,
 e.g. a particular build test, you can register your client connection with an _iteration ID_ and all
 further messages sent via that connection instance will be stored and archived in its own separate 
@@ -64,23 +65,13 @@ GET /log/new_instance => {"success":true,id:"13fea41bca90"}
 ```
 
 
-**Message Templates**
+**~~Message Templates~~**
 
-If you want output formatted in a particular fashion but don't want to have to provide all the
+~~If you want output formatted in a particular fashion but don't want to have to provide all the
 pieces of the "grooming" content repeatedly. You can submit _templates_ to the script and it will
-maintain, while running, these templates and apply them to messages as they come in.
-```
-POST /log/new_template?t=hot-output
-This output is {{orange}@0}}:exclamation:
- => {"success":true,"id":"hot-output"}
+maintain, while running, these templates and apply them to messages as they come in.~~
 
-then, later on:
 
-POST /log?t=hot-output
-...message-body...
-
-will result in the content of your message being turns orange!
-```
 **Interactive CLI**
 
 While the app is running, you can press the [Enter] and define the active context filter you want to
@@ -89,12 +80,11 @@ to see, you can also provide a general search term that will be highlighted in m
 
 Pressing [Enter] twice will display the current active filter definition. You may add or remove pieces of your filter definition instead of re-specifying the entire definition by using _partial definitions_. You can delete your entire filter definition by submitting "all", "*", or "-" as your definition which will go back to 'display all' mode. 
 
-**Remote CLI Filter**
+~~**Remote CLI Filter**~~
 
-You can change the active CLI filter by executing special POSTs from the client-side.
-```
-POST /log_filter
-def=_filter-definition_
+~~You can change the active CLI filter by executing special POSTs from the client-side.~~
 
-POST /log_replay?msgs=_num-of-msgs_
-```
+**Log Archive Review**
+
+Surfing to a special URI will present the user with all the logging data gathered from the application's lifespan, broken
+doing by iteration. There should be no real functional UI: let the browser do all the work for helping the user find stuff.

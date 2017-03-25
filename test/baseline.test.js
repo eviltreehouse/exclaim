@@ -64,8 +64,8 @@ describe("Core Functionality", () => {
 	});
 });
 
-describe("Filter functionality", () => {
-	it("With filter set, ensure msg gets through", function(done) {
+describe("ContextFilter functionality", () => {
+	it("With context filter set, ensure msg gets through", function(done) {
 		exclaim.setFilterTo('mocha', 'test');
 		var st = exclaim.stats().presented;
 		_post('/log', { 'msg': "TEST MESG - SEE ME 1", 'ctx': "mocha:test" }).then((res) => {
@@ -77,7 +77,7 @@ describe("Filter functionality", () => {
 		});				
 	});
 	
-	it("With filter set, ensure msg gets filtered", function(done) {
+	it("With context filter set, ensure msg gets filtered", function(done) {
 		exclaim.setFilterTo('mocha', 'test');
 		var st = exclaim.stats().presented;
 		var fst = exclaim.stats().filtered;
@@ -91,7 +91,7 @@ describe("Filter functionality", () => {
 		});		
 	});
 	
-	it("With filter unset, ensure msgs gets through", function(done) {
+	it("With context filter unset, ensure msgs gets through", function(done) {
 		exclaim.setFilterTo(null, null);
 		var st = exclaim.stats().presented;
 		_post('/log', { 'msg': "TEST MESG - SEE ME 3", 'ctx': "not_mocha:test" }).then((res) => {
@@ -104,6 +104,11 @@ describe("Filter functionality", () => {
 	});
 });
 
+describe("Search Functionality", () => {
+	it("With 'passive' search activated, we should get messages with terms highlighted");
+	it("With 'pruning' search activate, we should only get messages with terms present");
+});
+
 describe("CLI Functionality", () => {
 	it("We can send bad commands to our CLI handler", () => {
 		assert(! exclaim.sendCLI("demo"));
@@ -112,6 +117,15 @@ describe("CLI Functionality", () => {
 	it("We can send commands to our CLI handler to change our filter", () => {
 		assert( exclaim.sendCLI("app:*") );
 	});
+	
+	it("We can send commands to our CLI handler to change our search mode", () => {
+		assert( exclaim.sendCLI("app:*") );
+	});
+});
+
+describe("Session Functionality", () => {
+	it("We can establish a new logging session, which will clear our state");
+	it("We can replay a session in its entirety");
 });
 
 describe("Buffer Functionality", () => {
@@ -141,8 +155,14 @@ describe("Buffer Functionality", () => {
 		
 		assert(exclaim.stats().presented == st + 1);
 	});
+	
+	it("We can run back our buffer for x messages using our current filter and search mode");
 });
 
+describe("Persistence Functionality", () => {
+	it("We can commit all of our logs to disk to review later");
+	it("We can choose specific sessions to commit to disk");
+});
 
 var _post = (uri, _opts) => {
 	if (! _opts) _opts = {};
