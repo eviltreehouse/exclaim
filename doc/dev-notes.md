@@ -1,5 +1,7 @@
 ## Exclaim Engineering Notes
 
+### Emoji Manifest
+https://raw.githubusercontent.com/omnidan/node-emoji/master/lib/emoji.json
 
 ### UTF8 Bytes -> Unicode
 

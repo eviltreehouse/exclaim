@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+//#!/usr/bin/env node
 
 var http = require('http');
 var url = require('url');
@@ -10,23 +10,43 @@ var emojis = emoji.emoji;
 
 var static = require('./exclaim-static');
 
-const EXCLAIM_VERSION = '0.9.0';
+const EXCLAIM_VERSION = require('./package.json').version;
 
 const DEFAULT_PORT = 8010;
-const DEBUG = parseInt(process.env.DEBUG) > 0 ? true : false;
+const DEBUG = parseInt(process.env.EXCLAIM_DEBUG) > 0 ? true : false;
 const SUPPORTED_STYLE_COLORS = ['black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white'];
 const SUPPORTED_STYLE_TYPES  = ['bold', 'italic', 'underline', 'blink', 'inverse', 'strike'];
 
-var server;
-var total_msgs = filtered_msgs = presented_msgs = 0;
+function Exclaim(host, port, cb) {
+	
+	var self = this;
+	this.server = http.createServer(
+		(req, res) => {
+			self.handleRequest(req, res);
+		}
+	);
+	
+	if (! host) host = '127.0.0.1';
+	if (! port) port = DEFAULT_PORT;
+	
+	this.server.listen(port, host, function() {
+		console.log('%s  Ready on http://%s:%s', emojis.white_check_mark, host, port);
+		if (cb) cb();
+	});
+	
+	this.msgId = 1000; 
+	this.msg_buffer = [];
+	this.counts = {
+		'total': 0,
+		'filtered': 0,
+		'presented': 0
+	};
+	
+	this.active_filter = [null, null];
+	this.use_buffer = false;	
+}
 
-var msgId = 0;
-var use_buffer = false;
-var msg_buffer = [];
-
-var active_filter = [null, null];
-
-function handleRequest(request, response) {
+Exclaim.prototype.handleRequest = function(request, response) {
 	//var req = url.parse(request.url, true);
 	if (DEBUG) console.log(request.method + ' -> ' + request.url);
 	
@@ -38,6 +58,8 @@ function handleRequest(request, response) {
 		return;
 	}
 	
+	var self = this;
+	
 	if (request.method == 'POST') {
 		request.on('data', (chunk) => {
 			post_body += chunk.toString();
@@ -48,7 +70,7 @@ function handleRequest(request, response) {
 			if (Object.keys(post_body).length == 0) post_body = url.parse(request.url, true).query;
 			if (DEBUG) console.log('POST BODY:\n', post_body);
 			response.end(
-				JSON.stringify( parseRequest( url.parse(request.url).pathname, post_body) )
+				JSON.stringify( self.parseRequest( url.parse(request.url).pathname, post_body) )
 			);
 		});
 //	} else {
@@ -58,9 +80,9 @@ function handleRequest(request, response) {
 	//console.log("request=>\n", request);
 }
 
-function parseRequest(url, body) {
+Exclaim.prototype.parseRequest = function(url, body) {
 	if (url != '/log') {
-		if (DEBUG) console.log("??? Non /log request", url);
+		if (DEBUG) console.log("??? Non /log POST", url);
 		return { success: false };
 	}
 	
@@ -69,22 +91,22 @@ function parseRequest(url, body) {
 
 	var raw_msg = body['msg'];
 	
-	var msg = processMessage(raw_msg, ctx);
+	var msg = this.processMessage(raw_msg, ctx);
 	if (DEBUG) console.log( '> IN MSG:', `[${ctx}]`, raw_msg );
 	
-	if (! filterMessage(msg)) {
-		if (use_buffer) bufferMessage(msg); 
-		else logMessage(msg);
+	if (! this.filterMessage(msg)) {
+		if (this.use_buffer) this.bufferMessage(msg); 
+		else this.logMessage(msg);
 	} else {
-		if (DEBUG) console.log("{ message filtered }", active_filter);
+		if (DEBUG) console.log("{ message filtered }", this.active_filter);
 	}
 	
-	return { success: true, msgId: ++msgId, context: ctx, msgLen: msg.msg.length };
+	return { success: true, msgId: ++this.msgId, context: ctx, msgLen: msg.msg.length };
 }
 
-function filterMessage(msg) {
+Exclaim.prototype.filterMessage = function(msg) {
 	// to do: use any filters we have and return `true` if we want to ignore it.
-	if (active_filter[0] == null && active_filter[1] == null) return false;
+	if (this.active_filter[0] == null && this.active_filter[1] == null) return false;
 	
 	var filtered = false;
 	
@@ -95,57 +117,119 @@ function filterMessage(msg) {
 		filtered = true;
 	} else {
 		var ctx = msg.ctx.split(":");
-		if (active_filter[0] == null || active_filter[0] == '*' || ctx[0] == active_filter[0]) {
+		if (this.active_filter[0] == null || this.active_filter[0] == '*' || ctx[0] == this.active_filter[0]) {
 			// so far so good
 		} else {
 			filtered = true;
 		}
 		
-		if ( (!filtered) && (active_filter[1] == null || active_filter[1] == '*' || ctx[1] == active_filter[1])) {
+		if ( (!filtered) && (this.active_filter[1] == null || this.active_filter[1] == '*' || ctx[1] == this.active_filter[1])) {
 			// I think we're okay
 		} else {
 			filtered = true;
 		}
 	}
 	
-	if (filtered) filtered_msgs += 1;
+	if (filtered) this.counts.filtered += 1;
 	
 	return filtered;
 }
 
-function processMessage(_msg, ctx) {
+Exclaim.prototype.processMessage = function(_msg, ctx) {
 	var styled_msg = styleMessage(_msg);
 	var parsed_msg = emoji.emojify(styled_msg);
 	
-	total_msgs += 1;
+	this.counts.total += 1;
 	
 	return { 'msg': parsed_msg, 'ctx': ctx };
 }
 
-function bufferMessage(msg) {
-	msg_buffer.push(msg);
+Exclaim.prototype.bufferMessage = function(msg) {
+	this.msg_buffer.push(msg);
 }
 
-function flushBuffer() {
+Exclaim.prototype.flushBuffer = function() {
 	// protect against sudden re-engagement
-	var siz = msg_buffer.length;
+	var siz = this.msg_buffer.length;
 	
 	for (var i = 0; i < siz; i++) {
-		logMessage(msg_buffer.shift());
+		this.logMessage(this.msg_buffer.shift());
 	}
 	
-	if ( (! use_buffer) && msg_buffer.length > 0) {
+	if ( (! this.use_buffer) && this.msg_buffer.length > 0) {
 		// recurse if something showed up and its 
 		// okay to display.
-		flushBuffer();
+		this.flushBuffer();
 	}
 }
 
-function logMessage(msg) {
+Exclaim.prototype.logMessage = function(msg) {
 	var _msg = msg.ctx != null ? clc.bold(`[${msg.ctx}]`) + ` ${msg.msg}` : `${msg.msg}`;
 	console.log(_msg);
-	presented_msgs += 1;
+	this.counts.presented += 1;
 }
+
+// alias some functionality to make testing easier.
+Exclaim.prototype.sendCLI = function(cmd) {
+	return processCLI(this, cmd);
+};
+
+Exclaim.prototype.stats = function() {
+	return {
+		'total': this.counts.total,
+		'filtered': this.counts.filtered,
+		'presented': this.counts.presented,
+		'buffer': this.use_buffer ? 1 : 0,
+		'buffered': this.msg_buffer.length
+	};
+};
+
+Exclaim.prototype.setFilterTo = function(a, b) {
+	this.active_filter[0] = a ? a : null;
+	this.active_filter[1] = b ? b : null;
+};
+
+Exclaim.prototype.useBuffer = function(bool) {
+	if (bool) {
+		this.use_buffer = true;
+	} else {
+		this.use_buffer = false;
+		if (this.msg_buffer.length > 0) {
+			this.flushBuffer();
+		}
+	}
+};
+
+
+function processCLI(ex, cmd) {
+	if (DEBUG) console.log( emoji.emojify(`:watermelon:  RAW ${cmd}`) );
+
+	cmd = cmd.replace(/\n$/, '');
+	
+	if (cmd.length == 0) return true;
+	
+	if (cmd.match(/^[a-zA-Z0-9\-\_\*]+:[a-zA-Z0-9\-\_\*]+$/)) {
+		// set filter
+		var filter = cmd.split(":");
+		ex.setFilterTo(filter[0] == '*' ? null : filter[0],
+					   filter[1] == '*' ? null : filter[1]
+		);
+		
+		console.log(emoji.emojify(`:flashlight:  Filter SET to '${filter}'.`));
+		return true;
+	} else if (cmd == 'x' || cmd == '*' || cmd == '-' || cmd == 'all') {
+		// set filter off
+		ex.setFilterTo(null, null);
+		
+		console.log(emoji.emojify(`:flashlight:  Filter disabled.`));
+		return true;
+	} else {
+		return false;
+	}
+	
+	return false;
+}
+
 
 function styleMessage(_msg) {
 	var ma;
@@ -177,111 +261,43 @@ function styleText(_style, text) {
 	return f ? f(text) : text;
 }
 
-
-function serve(host, port, cb) {
-	server = http.createServer(handleRequest);
-	if (! host) host = '127.0.0.1';
-	if (! port) port = DEFAULT_PORT;
-	
-	server.listen(port, host, function() {
-		console.log('Ready on %s:%s %s', host, port, emojis.heart);
-		if (cb) cb();
-	});
-	
-	msgId = 0; msg_buffer.length = 0;
-	total_msgs = filtered_msgs = presented_msgs = 0;
-
-	use_buffer = false;
-	
-	return true;
-}
-
-// alias some functionality to make testing easier.
-serve.sendCLI = function(cmd) {
-	return processCLI(cmd);
-};
-
-serve.stats = function() {
-	return {
-		'total': total_msgs,
-		'filtered': filtered_msgs,
-		'presented': presented_msgs,
-		'buffer': use_buffer ? 1 : 0,
-		'buffered': msg_buffer.length
-	};
-};
-
-serve.setFilterTo = function(a, b) {
-	active_filter[0] = a;
-	active_filter[1] = b;
-};
-
-serve.useBuffer = function(bool) {
-	if (bool) {
-		use_buffer = true;
-	} else {
-		use_buffer = false;
-		if (msg_buffer.length > 0) {
-			flushBuffer();
-		}
-	}
-};
-
-function activateCLI() {
+function activateCLI(ex) {
 	process.stdin.setEncoding('utf-8');
 	
 	process.stdin.on('readable', () => {
 		var chunk = process.stdin.read();
 		if (chunk !== null) {
-			if (! processCLI(chunk)) {
+			if (! processCLI(ex, chunk)) {
 				console.log(emoji.emojify(clc.red.bold(":warning:  Unknown command: ") + chunk));
 			}
 		}
 	});
 }
 
-function processCLI(cmd) {
-	if (DEBUG) console.log( emoji.emojify(`:watermelon:  RAW ${cmd}`) );
-
-	cmd = cmd.replace(/\n$/, '');
-	
-	if (cmd.length == 0) return true;
-	
-	if (cmd.match(/^[a-zA-Z0-9\-\_\*]+:[a-zA-Z0-9\-\_\*]+$/)) {
-		// set filter
-		var filter = cmd.split(":");
-		active_filter[0] = filter[0] == '*' ? null : filter[0];
-		active_filter[1] = filter[1] == '*' ? null : filter[1];
-		
-		filter = filter.join(":");
-		
-		console.log(emoji.emojify(`:flashlight:  Filter SET to '${filter}'.`));
-		return true;
-	} else if (cmd == 'x' || cmd == '*' || cmd == '-' || cmd == 'all') {
-		// set filter off
-		active_filter[0] = null;
-		active_filter[1] = null;
-		
-		console.log(emoji.emojify(`:wrench:  Filter disabled.`));
-		return true;
-	} else {
-		return false;
-	}
-	
-	return false;
+function timestamp() {
+	var now = new Date();
+	return [
+		now.toLocaleDateString(),
+		now.toLocaleTimeString()
+	].join(" ");
 }
 
-function sayHi() {
-	console.log(emoji.get('flashlight') + '  ' + clc.cyanBright.bold( "EXCLAIM " + EXCLAIM_VERSION) + " ...A neat way to remote log!");
-	console.log("by: corey@eviltreehouse.com / Distributed as free software.");
+function epoch() {
+	return Math.floor(Date.now() / 1000);
+}
+
+function displayBanner() {
+	console.log('');
+	console.log(emoji.get('flashlight') + '  ' + clc.cyanBright.bold( "[ Exclaim! " + EXCLAIM_VERSION) + " ] A handy remote log tool!");
+	console.log(emoji.get('flashlight') + "  by: Corey Sharrah <corey@eviltreehouse.com>");
+	console.log(emoji.get('flashlight') + "  http://eviltreehouse.com/");
 	console.log('');
 }
 
 // Either fire immediately or wait to be invoked.
 if (require.main === module) {
-	sayHi();
-	serve();
-	activateCLI();
+	displayBanner();
+	activateCLI(new Exclaim());
 } else {
-	module.exports = serve;
+	module.exports = Exclaim;
 }

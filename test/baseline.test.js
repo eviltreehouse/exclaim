@@ -2,13 +2,15 @@ var assert = require('simple-assert');
 var Lie = require('lie');
 var request = require('request');
 
-var exclaim = require('../exclaim');
+var Exclaim = require('../exclaim');
+
+var exclaim;
 
 describe("Mocha OK", () => {
 	it("Assertions should work", () => { assert(true); });
 	it("We can fire up our exclaim listener", (done) => {
-		assert(exclaim);
-		assert(exclaim(process.env.TEST_HOST, process.env.TEST_PORT, done));
+		assert(Exclaim);
+		assert(exclaim = new Exclaim(process.env.TEST_HOST, process.env.TEST_PORT, done));
 	});
 });
 

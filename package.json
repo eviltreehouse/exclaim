@@ -1,7 +1,7 @@
 {
   "name": "exclaim",
-  "version": "1.0.0",
-  "description": "A remote log server w/ Emoji support for web game development",
+  "version": "0.5.0",
+  "description": "A remote log server utility w/ Emoji support for web game development",
   "main": "exclaim.js",
   "scripts": {
     "start": "node ./exclaim.js",
