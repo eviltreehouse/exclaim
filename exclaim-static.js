@@ -4,6 +4,8 @@ function staticPost(methodName) {
 !function(w) {
 	const CLIENT_ID = Math.random().toString('32').toUpperCase().replace(/^0\./, '');
 	var SESSION_ID = null;
+	var EXCLAIM_HOST = null;
+//	var EXCLAIM_HOST = 'http://localhost:18101';
 
 	function ${methodName}(msg, ctx) {
 		var uri = '/log';
@@ -13,8 +15,8 @@ function staticPost(methodName) {
 			arg_string.push( ak + "=" + encodeURIComponent(args[ak]) );
 		}
 
-		var url = uri + '?' + arg_string.join("&");
-		_post(url);
+		var url = EXCLAIM_HOST + uri + '?' + arg_string.join("&");
+		return _post(url);
 	}
 
 	function ${methodName}Next(sid) {
@@ -30,14 +32,24 @@ function staticPost(methodName) {
 
 	function ${methodName}Context(ctx) {
 		return function(msg) {
-			${methodName}(msg, ctx);
+			return ${methodName}(msg, ctx);
 		};
+	}
+
+	function ${methodName}Config(host, port) {
+		if (host && !port) {
+			EXCLAIM_HOST = host;
+		} else {
+			EXCLAIM_HOST = [ host, port ].join(":");
+		}
 	}
 
 	function _post(a,b){return b=new XMLHttpRequest,b.open("POST",a),a=[],b.onreadystatechange=b.then=function(c,d,e,f){if(c&&c.call&&(a=[,c,d]),4==b.readyState&&(e=a[0|b.status/200])){try{f=JSON.parse(b.responseText)}catch(g){f=null}e(f,b)}},b.send(),b}
 
 	w.${methodName} = ${methodName};
 	w.${methodName}Context = ${methodName}Context;
+	w.${methodName}Config = ${methodName}Config;
+
 }(this);
 `;
 	}

@@ -1,0 +1,99 @@
+<!doctype html>
+<html>
+<head>
+	<title>Exclaim! Test Bench v0.5.0</title>
+	<meta charset="utf-8">
+	<style>
+		BODY  { font-family: 'Andale Mono'; font-size: 10pt; }
+		.result { margin: 0px 8px; color: #FFF; font-size: 9pt; padding: 4px; display: inline; float: left; }	
+		
+		#log { overflow: scroll; background-color: #F0F0F0; width: 90%; height: 300px; border: 1px solid #D0D0D0; }
+		#msgs_succ_cnt { color: #090; }
+		#msgs_fail_cnt { color: #900; }
+	</style>
+<script src="http://localhost:18101/exclaim.js" type="text/javascript"></script>
+<script type="text/javascript">
+	var i_xmit = null;
+	
+	var msgs_succ = 0;
+	var msgs_fail = 0;
+	
+	function stopXmit() {
+		if (i_xmit) {
+			clearInterval(i_xmit);
+			i_xmit = null;
+			msgs_succ = 0;
+			msgs_fail = 0;
+		}
+	}
+	
+	function xmit() {
+		updateCounts();
+		document.getElementById('log').innerHTML = '';
+		
+		var ctx = _val('ctx');
+		var base_msg = _val('msg');
+		
+		var every = 1000 / parseInt(_val('rate'));
+		if (! every) {
+			console.error('every', every);
+			return;
+		}
+		
+		if (! base_msg) {
+			console.error("no base msg");
+			return;
+		}
+		
+		i_xmit = setInterval(() => {
+			exclaim(buildMsg(base_msg), ctx).then((resp) => {
+				log(!resp.success, resp.msgId);
+			});
+		}, every
+	 );	
+	}
+	
+	function buildMsg(base) {
+		return base + Math.random().toString('32');
+	}
+	
+	function _val(id) {
+		return document.getElementById(id).value;
+	}
+	
+	function log(err, msgId) {
+		if (err) msgs_fail += 1;
+		else msgs_succ += 1;
+		
+		updateCounts();
+		
+		var span = document.createElement("SPAN");
+		span.setAttribute('class', 'result');
+		span.style.backgroundColor = err ? '#990000' : '#009900';
+		span.innerHTML = msgId;
+		document.getElementById('log').appendChild(span);
+	}
+	
+	function updateCounts() {
+		document.getElementById('msgs_succ_cnt').innerHTML = msgs_succ;
+		document.getElementById('msgs_fail_cnt').innerHTML = msgs_fail;
+	}
+
+	// set up our exclaimer!
+	exclaimConfig('http://localhost', 18101);
+</script>	
+</head>
+<body>
+<h2><span style='color: #620062;'>Exclaim!</span> Test Bench (Msgs: <span id="msgs_succ_cnt">0</span> / <span id="msgs_fail_cnt">0</span>)</h2>
+<b style='color: #AAAAAA;'>version 0.5.0</b><br />
+
+<strong>Context: </strong><input type="text" id="ctx" size="24" /><br />
+<strong>Msg Base: </strong><input type="text" id="msg" size="60" /><br />
+<strong>Msgs/sec: </strong><input type="text" id="rate" size="6" /><br />
+<button onClick="xmit()">Transmit!</button>
+<button onClick="stopXmit()">Halt!</button>
+
+<div id="log">
+</div>
+</body>
+</html>

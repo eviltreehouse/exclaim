@@ -12,7 +12,7 @@ var static = require('./exclaim-static');
 
 const EXCLAIM_VERSION = require('./package.json').version;
 
-const DEFAULT_PORT = 8010;
+const DEFAULT_PORT = 18101;
 const DEBUG = parseInt(process.env.EXCLAIM_DEBUG) > 0 ? true : false;
 const SUPPORTED_STYLE_COLORS = ['black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white'];
 const SUPPORTED_STYLE_TYPES  = ['bold', 'italic', 'underline', 'blink', 'inverse', 'strike'];
@@ -51,8 +51,14 @@ Exclaim.prototype.handleRequest = function(request, response) {
 	if (DEBUG) console.log(request.method + ' -> ' + request.url);
 	
 	post_body = '';
+
+	// Write CORS Headers so it can be used globally
+    response.setHeader('Access-Control-Allow-Origin', '*');
+    response.setHeader('Access-Control-Allow-Methods', 'GET,POST');
+    response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+	// ...
 	
-	if (request.url == '/exclaim.js') {
+	if (url.parse(request.url).pathname == '/exclaim.js') {
 		response.setHeader('Content-Type', 'text/javascript');
 		response.end( static.postJS() );
 		return;
@@ -69,13 +75,20 @@ Exclaim.prototype.handleRequest = function(request, response) {
 			post_body = qs.parse(post_body);
 			if (Object.keys(post_body).length == 0) post_body = url.parse(request.url, true).query;
 			if (DEBUG) console.log('POST BODY:\n', post_body);
-			response.end(
-				JSON.stringify( self.parseRequest( url.parse(request.url).pathname, post_body) )
-			);
+			
+			var resp_content = JSON.stringify( self.parseRequest( url.parse(request.url).pathname, post_body) );
+			if (DEBUG) console.log('RESPONSE CONTENT -> ', resp_content);
+			
+			response.setHeader('Content-Type', 'text/javascript');
+			response.end(resp_content);
 		});
-//	} else {
-//		response.end('{"success":false}');
+		
+		return;
 	}
+	
+	// catch all -> 404
+	response.writeHead(404, { 'Content-Type': 'text/plain' });
+	response.end('File Not Found');
 	
 	//console.log("request=>\n", request);
 }
