@@ -30,7 +30,7 @@ function Exclaim(host, port, cb) {
 	if (! port) port = DEFAULT_PORT;
 	
 	this.server.listen(port, host, function() {
-		console.log('%s  Ready on http://%s:%s', emojis.white_check_mark, host, port);
+		present('%s  Ready on http://%s:%s', emojis.white_check_mark, host, port);
 		if (cb) cb();
 	});
 	
@@ -164,9 +164,9 @@ Exclaim.prototype.flushBuffer = function() {
 }
 
 Exclaim.prototype.logMessage = function(msg) {
-	var _msg = msg.ctx != null ? clc.bold(`[${msg.ctx}]`) + ` ${msg.msg}` : `${msg.msg}`;
-	console.log(_msg);
 	this.counts.presented += 1;
+	var _msg = msg.ctx != null ? clc.bold(`[${msg.ctx}]`) + ` ${msg.msg}` : `${msg.msg}`;
+	present(msg);
 }
 
 // alias some functionality to make testing easier.
@@ -215,13 +215,13 @@ function processCLI(ex, cmd) {
 					   filter[1] == '*' ? null : filter[1]
 		);
 		
-		console.log(emoji.emojify(`:flashlight:  Filter SET to '${filter}'.`));
+		present(emoji.emojify(`:flashlight:  Filter SET to '${filter}'.`));
 		return true;
 	} else if (cmd == 'x' || cmd == '*' || cmd == '-' || cmd == 'all') {
 		// set filter off
 		ex.setFilterTo(null, null);
 		
-		console.log(emoji.emojify(`:flashlight:  Filter disabled.`));
+		present(emoji.emojify(`:flashlight:  Filter disabled.`));
 		return true;
 	} else {
 		return false;
@@ -268,7 +268,7 @@ function activateCLI(ex) {
 		var chunk = process.stdin.read();
 		if (chunk !== null) {
 			if (! processCLI(ex, chunk)) {
-				console.log(emoji.emojify(clc.red.bold(":warning:  Unknown command: ") + chunk));
+				present(emoji.emojify(clc.red.bold(":warning:  Unknown command: ") + chunk));
 			}
 		}
 	});
@@ -285,6 +285,15 @@ function timestamp() {
 function epoch() {
 	return Math.floor(Date.now() / 1000);
 }
+
+function present() {
+	// We don't actually need to display anything when
+	// running our unit tests...	
+	if (process.env.NODE_ENV != 'test') {
+		console.log.apply(console, Array.prototype.slice.call(arguments));
+	}
+}
+
 
 function displayBanner() {
 	console.log('');
