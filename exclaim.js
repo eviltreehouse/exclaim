@@ -17,6 +17,7 @@ const EXCLAIM_VERSION = require('./package.json').version;
 const DEFAULT_PORT = 18101;
 const DEBUG = parseInt(process.env.EXCLAIM_DEBUG) > 0 ? true : false;
 const SUPPORTED_STYLE_COLORS = ['black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white'];
+const RAND_COLORS = [ 'black', 'red', 'green', 'blue', 'magenta', 'cyan' ];
 const SUPPORTED_STYLE_TYPES  = ['bold', 'italic', 'underline', 'blink', 'inverse', 'strike'];
 
 function Exclaim(host, port, cb) {
@@ -199,7 +200,9 @@ Exclaim.prototype.processMessage = function(idx, msg, ctx, sid) {
 		this._sessions[sid.toString()] = true;
 	}
 	
-	var m = { 'idx': idx, 'msg': msg, 'msg_present': parsed_msg, 'ctx': ctx, 'sid': sid };
+	var now = Math.floor(Date.now() / 1000);
+	
+	var m = { 'ts': now, 'idx': idx, 'msg': msg, 'msg_present': parsed_msg, 'ctx': ctx, 'sid': sid };
 	this.msg_archive.push(m);
 	
 	return m;
@@ -231,13 +234,18 @@ Exclaim.prototype.flushArchive = function() {
 
 Exclaim.prototype.logMessage = function(msg, replay) {
 	this.counts.presented += 1;
-	var now = timestamp();
+	var now = timestamp(msg.ts);
 	var sid = msg.sid;
 	
 	if (sid != this.lastSid) {
 		this.lastSid = sid;
 		this.sidColor = diffRandColor(this.sidColor);
 	}	
+	
+	if (! sid) {
+		// for presentation
+		sid = "--";	
+	}
 	
 	var msg_header = replay ? clc.italic(`[${now} ${sid}]`) : clc.bold(`[${now} ${sid}]`);
 	
@@ -272,10 +280,20 @@ Exclaim.prototype.replayLog = function(msgCount, sid) {
 		target_msgs = this.sortArchive(archive).slice(msgCount * -1);
 	}
 	
+	var disp = 0; var filt = 0; var total = 0;
 	for (var mi in target_msgs) {
 		var msg = target_msgs[mi];
-		if (! this.filterMessage(msg)) this.logMessage(msg, true);
+		if (! this.filterMessage(msg)) {
+			this.logMessage(msg, true);
+			disp++;
+		} else {
+			filt++;
+		}
 	}
+	
+	total = disp + filt;
+	
+	present(styleMessage(`{{bold} ${total}}} message(s) replayed ({{bold} ${disp}}} displayed / {{bold} ${filt}}} filtered)`));
 };
 	
 Exclaim.prototype.sortArchive = function(a) {
@@ -481,8 +499,8 @@ function activateCLI(ex) {
 	});
 }
 
-function timestamp() {
-	var now = new Date();
+function timestamp(epoch) {
+	var now = new Date(epoch * 1000);
 	return [
 		now.toLocaleDateString(),
 		now.toLocaleTimeString()
@@ -508,7 +526,7 @@ function diffRandColor(cur) {
 	var new_color = null;
 	
 	while (! done) {
-		var rnd = SUPPORTED_STYLE_COLORS[ Math.floor(Math.random() * SUPPORTED_STYLE_COLORS.length) ];
+		var rnd = RAND_COLORS[ Math.floor(Math.random() * RAND_COLORS.length) ];
 		if (rnd != cur) {
 			new_color = rnd;
 			done = true;
