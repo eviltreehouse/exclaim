@@ -1,12 +1,12 @@
 {
   "name": "exclaim",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "A remote log server utility w/ Emoji support for web game development",
   "main": "exclaim.js",
   "scripts": {
     "start": "node ./exclaim.js",
     "test": "DEBUG=0 TEST_HOST=localhost TEST_PORT=8010 NODE_ENV=test mocha",
-	"test-verbose": "DEBUG=0 TEST_HOST=localhost TEST_PORT=8010 EXCLAIM_FORCE_PRESENT=1 mocha"
+    "test-verbose": "DEBUG=0 TEST_HOST=localhost TEST_PORT=8010 EXCLAIM_FORCE_PRESENT=1 mocha"
   },
   "author": "Corey Sharrah <corey@eviltreehouse.com>",
   "license": "ISC",
