@@ -52,16 +52,16 @@ Wrap the message content you want affected like so: ```Lets show some {{red}red 
 
 *re-write to match new methodology*
 For situations where grouping messages into a logical context instead of a global context is preferable,
-e.g. a particular build test, you can register your client connection with an _iteration ID_ and all
+e.g. a particular run test, you can register your messages with an _iteration ID_ and all
 further messages sent via that connection instance will be stored and archived in its own separate 
-compartment and archived accordingly (when archiving is enabled.) Visually in the tool, it will make
+container and archived accordingly (when archiving is enabled.) Visually in the tool, it will make
 a subtle font separation as you go from iteration ID to iteration ID so you can easily compare output
 from two different iterations within the same context, for example.
 ```
 // All messages sent after this GET will be grouped into it until another one is requested.
 // As such, this feature is really only beneifical in its current state for doing
 // static and synchronous logging. 
-GET /log/new_instance => {"success":true,id:"13fea41bca90"}
+msg=_your-message-data_&ctx=_your-context_&sid=_session_id_
 ```
 
 

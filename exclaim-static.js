@@ -1,4 +1,4 @@
-function staticPost(methodName) {
+function staticPost(methodName, exclaimVersion) {
 	if (! methodName) methodName = 'exclaim';
 	return `
 !function(w) {
@@ -7,9 +7,11 @@ function staticPost(methodName) {
 	var EXCLAIM_HOST = null;
 //	var EXCLAIM_HOST = 'http://localhost:18101';
 
+	var i = 0;
+
 	function ${methodName}(msg, ctx) {
 		var uri = '/log';
-		var args = { 'msg': msg, 'ctx': ctx ? ctx : '-', 'sid': SESSION_ID };
+		var args = { 'msg': msg, 'ctx': ctx ? ctx : '-', 'sid': SESSION_ID, 'i': i++ };
 		var arg_string = [];
 		for (var ak in args) {
 			arg_string.push( ak + "=" + encodeURIComponent(args[ak]) );
@@ -50,6 +52,9 @@ function staticPost(methodName) {
 	w.${methodName}Context = ${methodName}Context;
 	w.${methodName}Config = ${methodName}Config;
 
+	${methodName}Next();		// init session
+
+	console.info("Exclaim! version ${exclaimVersion} loaded.");
 }(this);
 `;
 	}
