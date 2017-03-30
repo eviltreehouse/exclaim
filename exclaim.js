@@ -261,6 +261,20 @@ Exclaim.prototype.logMessage = function(msg, replay) {
 	present(_msg);
 };
 
+Exclaim.prototype.sessionManifest = function() {
+	var sessions = [];
+	
+	var sorted = Object.keys(this._sessions).sort();
+	
+	for (var si in sorted) {
+		var sid = sorted[si];
+		var count = this.msg_archive.filter((v) => { return v.sid == sid; }).length;
+		sessions.push( [ sid, count ] );
+	}
+	
+	return sessions;
+};
+
 Exclaim.prototype.replayLog = function(msgCount, sid) {
 	var target_msgs = [];
 	var archive = this.msg_archive;
@@ -414,6 +428,15 @@ function processCLI(ex, cmd) {
 		var count = res[1];
 		if (count < 1) return false;
 		ex.replayLog(count);
+		
+		return true;
+	} else if (cmd.match(/^\@\.$/)) {
+		// list sessions
+		var sessions = ex.sessionManifest();
+		for (var si in sessions) {
+			present(styleMessage(`{{bold} ${sessions[si][0]}}}: ${sessions[si][1]}`));
+		}
+		present(styleMessage(`${sessions.length} sessions(s).`));
 		
 		return true;
 	} else if (cmd.match(/^\@.*?(\=\d+)?$/)) {
